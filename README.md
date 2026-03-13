@@ -12,10 +12,15 @@ The main driver behind this project is [Camelot](https://pypi.org/project/camelo
 1. Requires Python 3.7 and up
 2. Requires the PDF interpreter [Ghostscript](https://www.ghostscript.com/). Download and install.
 3. In a terminal/CMD window, navigate to the folder where the requirements.txt file is (ex. cd Drive:\Path\To\PDF Extractor Folder\) and run ```pip install -r requirements.txt``` to install required packages
-4. Run ```pdf_data_extract.py```
-5. The script will generate a ```config.yaml``` file and exit
-6. Edit the ```confg.yaml``` file, following the comments within it to ensure the correct values are being enetered
-7. Re-run ```pdf_data_extract.py``` when ready to extract
+
+**If running with configuration file:**
+1. Run ```pdf_data_extract.py```
+2. The script will generate a ```config.yaml``` file and exit
+3. Edit the ```confg.yaml``` file, following the comments within it to ensure the correct values are being enetered
+4. Re-run ```pdf_data_extract.py``` when ready to extract
+
+**If using within your own project/script:**
+1. Import desired functions from pdf_extract_utils. ex) ```from pdf_extract_utils import extract_and_export_tables, clean_csv```
 
 # Additional Info
 - The pages being extracted from the PDF are declared in the configuration file, but there may be times when the pages need to be temporarily changed. One possibility is the PDF may be missing a page it normally contains, thowing off the page numbers where the tables usually are. If this happens, it is easy to adjust without updating the config file by using the ```pdf_extract_fix.py``` script. When running this script, instead of using the value from the configuration, it will ask you to input the page numbers instead. Ensure you are entering the page numbers on a single line, separated with commas like so: ```5,7,9,15```

@@ -123,8 +123,7 @@ def clean_csv(file, clean_start=None, clean_end=None, filter_column=None, filter
     cleaning_failure_message = (
         f'column name in configuration not found. Did you set a name and did you spell it right? Did you mean to run the cleaning function? \n'
         f'Note that while the above CSV exported, due to this failure they were NOT cleaned.\n '
-        f'Please check the configuration file and run the script again to clean CSVs.\n'
-        f'Looking for: {clean_start}'
+        f'Please check the configuration file and run the script again to clean CSVs.'
     )
 
     if isinstance(file, str):
@@ -137,16 +136,16 @@ def clean_csv(file, clean_start=None, clean_end=None, filter_column=None, filter
  
         if clean_start:
             try:
-                # Shows originial DataFrame
+                # shows original dataframe
                 df = pd.read_csv(csv, skip_blank_lines=False, header=None)
                 print("Original DataFrame:")
                 print(df)
 
-                # Finds where clean_start is
+                # finds where clean_start is
                 row_index = df[df.isin([clean_start]).any(axis=1)].index[0]
                 print(f"Row index of clean_start ({clean_start}): {row_index}")
 
-                # Slice and transform DataFrame to clean up rows before the data
+                # slice and transform dataframe to clean up rows before the data
                 df = df.iloc[row_index:].reset_index(drop=True)
                 df = df.dropna(axis=1, how='all')
 
@@ -156,14 +155,14 @@ def clean_csv(file, clean_start=None, clean_end=None, filter_column=None, filter
                 print("Modified DataFrame:")
                 print(df)
 
-                # Clean up any potential fully NaN rows below headers, final slices and transformations
+                # clean up any potential fully NaN rows below headers, final slices and transformations
                 while df.iloc[1].isna().any():
                     df = df.drop(1).reset_index(drop=True)
 
                 df.columns = df.iloc[0]
                 df = df[1:].reset_index(drop=True)
 
-                # # Rename columns in code if desired
+                # # rename columns in code if desired
                 # new_column_names = [f"Header_{i}" for i in range(len(df.columns))]
                 # df.columns = new_column_names
 

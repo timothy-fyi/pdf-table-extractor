@@ -10,7 +10,7 @@ The main driver behind this project is [Camelot](https://pypi.org/project/camelo
 
 # Set Up
 1. Requires Python 3.7 and up
-2. *Potentially* requires the PDF interpreter [Ghostscript](https://www.ghostscript.com/). If you are run into issues (like the script not working at all), download and install.
+2. *Potentially* requires the PDF interpreter [Ghostscript](https://www.ghostscript.com/). If you run into issues (like the script not working at all), download and install.
 3. In a terminal/CMD window, navigate to the folder where the requirements.txt file is (ex. cd Drive:\Path\To\PDF Extractor Folder\) and run ```pip install -r requirements.txt``` to install required packages
 
 **If running with configuration file:**

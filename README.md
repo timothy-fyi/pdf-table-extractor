@@ -1,7 +1,7 @@
 # PDF Table Extractor
 
 # Use Case
-pdf-table-extractor was created using a specific set of PDF files that get delievered monthly and contain data used in business reporting. Instead of having to manually extract the data each month, this script will do it automatically and export the tables to CSV so that they can then be imported in data visualization tools and get transformed/reported on. There is also an option to lightly clean the resulting CSVs, supporting setting different start and end points of the data, filtering a column, and removing NaN values.
+pdf-table-extractor was created using a specific set of PDF files that get delivered monthly and contain data used in business reporting. Instead of having to manually extract the data each month, this script will do it automatically and export the tables to CSV so that they can then be imported in data visualization tools and get transformed/reported on. There is also an option to lightly clean the resulting CSVs, supporting setting different start and end points of the data, filtering a column, and removing NaN values.
 
 While this was built for a specific type of PDF and for a specific use case, it can likely be modified to suit other needs - if the base way it was set up isn't compatible with a given PDF.
 

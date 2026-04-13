@@ -50,7 +50,7 @@ def extract_and_export_tables(file, pages, export_folders, extract_string=False,
         pages (str): Pages where tables are to be extracted. As string, separated by comma.
         export_folders (str or list): Export location for tables. Input multiple as list.
         extract_string (list): Extracts text from file name. Two numbers only, inputted as list. Example: [-8,-4]
-        flavor (str): From camelot. 'stream': infers tables. 'lattice': work when tables are clearly defined in PDF.
+        flavor (str): From camelot. 'stream': infers tables. 'lattice': works when tables are clearly defined in PDF.
     """
     csv_paths = []
 
@@ -96,101 +96,123 @@ def extract_and_export_tables(file, pages, export_folders, extract_string=False,
 
     return csv_paths
 
-# to find location of specific text in dataframe
-def find_loc(df, search_value):
-    """
-    Extracts tables from a PDF file and exports them to CSV. Also returns a list of the locations of resulting CSVs.
-
-    Parameters:
-        df (pandas dataframe): Dataframe to find text.
-        search_value (any): Value to get location for in df.
-    """
-    result = np.where(df.apply(lambda row: row.astype(str) == search_value).values)
-    locations = list(zip(result[0], result[1]))
-    return locations[0][0]
-
-def clean_csv(file, clean_start=None, clean_end=None, filter_column=None, filter_values=[]):
-    """
-    Performs basic 'cleaning' on a CSV file.
-
-    Parameters:
-        file (str or list): CSV(s) to be cleaned. Include full path.
-        clean_start (str): Text where you would want column headers to start. If extracted PDF has space or additional unneeded text before data starts, use this option to remove it.
-        clean_end (str): Text where you would want data to end. Useful if there is summary columns or unneeded text after data that gets brought in with extraction.
-        filter_column (str): Column where you want the filtering to take place.
-        filter_values (list): Values to filter out of data. Ex) Filter filter_column where value is in filter_values.
-    """
-    cleaning_failure_message = (
-        f'column name in configuration not found. Did you set a name and did you spell it right? Did you mean to run the cleaning function? \n'
-        f'Note that while the above CSV exported, due to this failure they were NOT cleaned.\n '
-        f'Please check the configuration file and run the script again to clean CSVs.'
-    )
+def clean_csv(file, clean_start=None, clean_end=None, filter_column=None, filter_values=None):
+    if filter_values is None:
+        filter_values = []
 
     if isinstance(file, str):
         file = [file]
 
     for csv in file:
-        print(f'Cleaning {os.path.basename(csv)}')
+        print(f"\n--- Cleaning {os.path.basename(csv)} ---")
 
-        df = pd.read_csv(csv, skip_blank_lines=False, header=None)
- 
+        try:
+            df = pd.read_csv(csv, skip_blank_lines=False, header=None)
+        except Exception as e:
+            raise RuntimeError(f"[LOAD ERROR] {csv}: {e}")
+
         if clean_start:
             try:
-                # shows original dataframe
-                df = pd.read_csv(csv, skip_blank_lines=False, header=None)
-                print("Original DataFrame:")
-                print(df)
+                # normalize entire DF for searching
+                df_clean = df.map(
+                    lambda x: str(x).replace('\xa0', ' ').strip().lower()
+                    if pd.notna(x) else x
+                )
 
-                # finds where clean_start is
-                row_index = df[df.isin([clean_start]).any(axis=1)].index[0]
-                print(f"Row index of clean_start ({clean_start}): {row_index}")
+                target = clean_start.strip().lower()
 
-                # slice and transform dataframe to clean up rows before the data
-                df = df.iloc[row_index:].reset_index(drop=True)
+                matches = df_clean[df_clean.isin([target]).any(axis=1)]
+
+                if matches.empty:
+                    raise ValueError(
+                        f"'{clean_start}' not found.\nPreview:\n{df.head(10)}"
+                    )
+
+                header_row = matches.index[0]
+
+                df = df.iloc[header_row:].reset_index(drop=True)
+            
                 df = df.dropna(axis=1, how='all')
-
-                while len(df) > 1 and df.iloc[1].isna().all():
-                    df = df.drop(1).reset_index(drop=True)
-
-                print("Modified DataFrame:")
-                print(df)
-
-                # clean up any potential fully NaN rows below headers, final slices and transformations
-                while df.iloc[1].isna().any():
-                    df = df.drop(1).reset_index(drop=True)
 
                 df.columns = df.iloc[0]
                 df = df[1:].reset_index(drop=True)
 
-                # # rename columns in code if desired
-                # new_column_names = [f"Header_{i}" for i in range(len(df.columns))]
-                # df.columns = new_column_names
+                # removes rows that are not not needed (before first clean_start)
+                def is_valid_data_row(row):
+                    val = str(row.get('County', '')).strip()
+                    return val and val.lower() not in ['nan', 'change']
 
-                print("Final DataFrame:")
-                print(df)
+                while len(df) > 0 and not is_valid_data_row(df.iloc[0]):
+                    df = df.iloc[1:].reset_index(drop=True)
 
-            except (IndexError, KeyError):
-                print(f'Start {cleaning_failure_message}')
-                exit()
+                # clean column names
+                df.columns = [
+                    str(col).replace('\xa0', ' ').strip()
+                    for col in df.columns
+                ]
+
+            except Exception as e:
+                raise RuntimeError(
+                    f"[CLEAN_START FAILURE]\nFile: {csv}\nTarget: {clean_start}\nError: {e}"
+                )
+
+        # normalize all cells
+        df = df.map(
+            lambda x: str(x).replace('\xa0', ' ').strip()
+            if isinstance(x, str) else x
+        )
 
         if clean_end:
             try:
-                end = find_loc(df, clean_end)
-                df = df.loc[:end - 1]
-            except (IndexError, KeyError):
-                print(f'End {cleaning_failure_message}')
-                exit()
+                if 'County' not in df.columns:
+                    raise KeyError(
+                        f"'County' column missing. Columns: {list(df.columns)}"
+                    )
+
+                county = df['County'].astype(str).str.strip()
+
+                matches = df[county.str.lower() == clean_end.strip().lower()]
+
+                if matches.empty:
+                    raise ValueError(
+                        f"'{clean_end}' not found in County column.\n"
+                        f"Nearby values:\n{county[county.str.contains('total', case=False, na=False)].unique()}"
+                    )
+
+                end_idx = matches.index[0]
+                df = df.loc[:end_idx - 1]
+
+            except Exception as e:
+                raise RuntimeError(
+                    f"[CLEAN_END FAILURE]\nFile: {csv}\nTarget: {clean_end}\nError: {e}"
+                )
 
         if filter_column:
             try:
-                for value in filter_values:
-                    df = df[~df[filter_column].str.contains(value)]
-            except (IndexError, KeyError):
-                print(f'Filter {cleaning_failure_message}')
-                exit()
+                if filter_column not in df.columns:
+                    raise KeyError(
+                        f"Column '{filter_column}' not found.\nColumns: {list(df.columns)}"
+                    )
 
-        df = df.dropna(axis=1, how='all')
-        df.to_csv(csv, index=False)
+                for value in filter_values:
+                    df = df[
+                        ~df[filter_column]
+                        .astype(str)
+                        .str.contains(value, case=False, na=False)
+                    ]
+
+            except Exception as e:
+                raise RuntimeError(
+                    f"[FILTER FAILURE]\nFile: {csv}\nColumn: {filter_column}\nError: {e}"
+                )
+            
+        try:
+            df = df.dropna(axis=1, how='all')
+            df.to_csv(csv, index=False)
+        except Exception as e:
+            raise RuntimeError(f"[SAVE FAILURE] {csv}: {e}")
+
+        print(f"Done: {os.path.basename(csv)}")
 
 def move_files(file, grab_from_folder, move_to_folder):
     """
